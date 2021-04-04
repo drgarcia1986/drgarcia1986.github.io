@@ -1,7 +1,7 @@
 ---
 title: "Building a Personal Activity Tracker"
-date: 2021-04-03
-draft: true
+date: 2021-04-04
+draft: false
 ---
 
 > **Disclaimer**: This project/post is inspired on [Building an activity tracker with Go, Grafana, and InfluxDB](http://lucapette.me/building-an-activity-tracker-with-go-grafana-and-influxdb) by [lucapette](https://twitter.com/lucapette), so there're many common points and strategies.

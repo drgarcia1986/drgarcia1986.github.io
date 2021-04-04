@@ -1,4 +1,4 @@
-title = "Reinvent The Wheel"
+title = "Reinventing The Wheel"
 author = "Diego Garcia"
 theme = "etch"
 languageCode = "en-US"
@@ -8,7 +8,7 @@ pygmentsUseClasses = true
 baseURL = "/"
 
 [params]
-  description = "Reinvent The Wheel to learn how a wheel works"
+  description = "Reinventing the wheel to learn how a wheel works"
   copyright = "Copyright © 2021 Diego Garcia"
   dark = "auto"
   highlight = true
