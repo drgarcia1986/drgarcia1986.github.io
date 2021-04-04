@@ -1,3 +1,25 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Reinvent The Wheel</title><link>/</link><description>Recent content on Reinvent The Wheel</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><atom:link href="/index.xml" rel="self" type="application/rss+xml"/><item><title>About</title><link>/about/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/about/</guid><description>Hi my name is Diego Garcia and I&amp;rsquo;m a passionate Software Engineer.
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Reinvent The Wheel</title>
+    <link>/</link>
+    <description>Recent content on Reinvent The Wheel</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    
+	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>About</title>
+      <link>/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/about/</guid>
+      <description>Hi my name is Diego Garcia and I&amp;rsquo;m a passionate Software Engineer.
 Follow me on Twitter
-Or connect with me on LinkedIn</description></item></channel></rss>
+Or connect with me on LinkedIn</description>
+    </item>
+    
+  </channel>
+</rss>
