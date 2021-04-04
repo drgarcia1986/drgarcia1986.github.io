@@ -5,6 +5,7 @@ languageCode = "en-US"
 enableInlineShortcodes = true
 pygmentsCodeFences = true
 pygmentsUseClasses = true
+baseURL = "/"
 
 [params]
   description = "Reinvent The Wheel to learn how a wheel works"
