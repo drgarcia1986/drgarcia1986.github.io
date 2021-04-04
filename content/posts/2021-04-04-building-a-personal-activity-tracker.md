@@ -1,7 +1,7 @@
 ---
 title: "Building a Personal Activity Tracker"
-date: 2021-04-03
-draft: true
+date: 2021-04-04
+draft: false
 ---
 
 > **Disclaimer**: This project/post is inspired on [Building an activity tracker with Go, Grafana, and InfluxDB](http://lucapette.me/building-an-activity-tracker-with-go-grafana-and-influxdb) by [lucapette](https://twitter.com/lucapette), so there're many common points and strategies.
@@ -249,5 +249,5 @@ $ systemctl start productivity.service
 ```
 
 ## The Source Code
-I pushed everything of this POC to a Github repo but if you want to use it, you'll need to do some changes (this project was made to help me with my productivity and to have some fun).
+I pushed everything of this POC to a [Github repo](https://github.com/drgarcia1986/drgarcia1986.github.io/tree/samples/building-a-personal-activity-tracker) but if you want to use it, you'll need to do some changes (this project was made to help me with my productivity and to have some fun).
 I know it's weird but I named this project as [Floki](https://vikings.fandom.com/wiki/Floki), I thought Floki is a better name than _productivity_ or _tracker_.
