@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Reinventing The Wheel</title>
-    <link>/</link>
-    <description>Recent content on Reinventing The Wheel</description>
+    <title>Posts on Reinventing The Wheel</title>
+    <link>/posts/</link>
+    <description>Recent content in Posts on Reinventing The Wheel</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
     <lastBuildDate>Sun, 04 Apr 2021 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     

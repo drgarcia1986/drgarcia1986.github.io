@@ -1,13 +1,25 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Tags on Reinvent The Wheel</title>
+    <title>Tags on Reinventing The Wheel</title>
     <link>/tags/</link>
-    <description>Recent content in Tags on Reinvent The Wheel</description>
+    <description>Recent content in Tags on Reinventing The Wheel</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Building a Personal Activity Tracker</title>
+      <link>/building-a-personal-activity-tracker/</link>
+      <pubDate>Sun, 04 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/building-a-personal-activity-tracker/</guid>
+      <description>Disclaimer: This project/post is inspired on Building an activity tracker with Go, Grafana, and InfluxDB by lucapette, so there&amp;rsquo;re many common points and strategies.
+ If you&amp;rsquo;re reading this in 2021 you&amp;rsquo;re living the Coronavirus Pandemic Era and you&amp;rsquo;re most likely working from home. Well, I&amp;rsquo;m working from home too with my fiance and my daughter (and two cats). I&amp;rsquo;m a software engineer who works in a big retail company and this kind of job is very intense.</description>
+    </item>
     
     
     

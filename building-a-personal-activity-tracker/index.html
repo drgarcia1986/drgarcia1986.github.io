@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reinventing the wheel to learn how a wheel works">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Building a Personal Activity Tracker</title>
+</head>
+<body><header id="banner">
+    <h2><a href="/">Reinventing The Wheel</a></h2>
+    <nav>
+        <ul>
+            <li>
+                <a href="/" title="posts">posts</a>
+            </li><li>
+                <a href="/about/" title="">about</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Building a Personal Activity Tracker</h1><time>April 4, 2021</time></header><blockquote>
+<p><strong>Disclaimer</strong>: This project/post is inspired on <a href="http://lucapette.me/building-an-activity-tracker-with-go-grafana-and-influxdb">Building an activity tracker with Go, Grafana, and InfluxDB</a> by <a href="https://twitter.com/lucapette">lucapette</a>, so there&rsquo;re many common points and strategies.</p>
+</blockquote>
+<p><img src="/img/building-a-personal-activity-tracker/productivity_dash.png" alt="the dashboard"></p>
+<p>If you&rsquo;re reading this in 2021 you&rsquo;re living the <a href="https://www.who.int/health-topics/coronavirus">Coronavirus Pandemic Era</a> and you&rsquo;re most likely working from home.
+Well, I&rsquo;m working from home too with my fiance and my daughter (and two cats).
+I&rsquo;m a software engineer who works in a big retail company and this kind of job is very intense.
+To archive a good work/life balance, I try to do a great focused job on my working hours, but when it&rsquo;s time to rest I stop any job or study activity to give total attention to my family.
+I don&rsquo;t know how you handle it but for my is a bit tricky to get focused working from home with my family, so I&rsquo;m trying so hard to get rid of procrastination.
+To help me with this challenge I decided to build a simple activity tracker that monitoring my activities and give them a score based on some simple rules:</p>
+<ul>
+<li><strong>Work</strong>: 1 point</li>
+<li><strong>Social</strong>: 0 point</li>
+<li><strong>Game</strong>: -1 point</li>
+</ul>
+<p>Don&rsquo;t get me wrong, there&rsquo;s no problem with gaming and using social apps, but when I&rsquo;m working I need to use my time with wisdom.</p>
+<h2 id="how-i-built-this">How I built this?</h2>
+<p>The first POC was built for Ubuntu environment so there&rsquo;re some components to get all the project up and running:</p>
+<ul>
+<li>InfluxDB to keep the time series data.</li>
+<li>A Shell script to get the current X window activity and send it to API.</li>
+<li>A Go API to receive activity events, treat the data, and save on InfluxDB.</li>
+<li>Grafana to show activities dashboard.</li>
+</ul>
+<p>Just for fun, I deployed every component (except the shell script) on an old Raspberry Pi 1 running <a href="https://dietpi.com/">DietPi</a> distro.</p>
+<h4 id="maybe-youre-thinking-why">Maybe you&rsquo;re thinking, &ldquo;Why&rdquo;?</h4>
+<p>It&rsquo;s ok if you&rsquo;re thinking about my decisions but I&rsquo;ll try to explain some points.</p>
+<h5 id="why-deploy-it-on-a-raspberry-pi">Why deploy it on a Raspberry Pi?</h5>
+<p>The first (and maybe the main) reason is I had an old Raspberry Pi 1 saved for nothing so I decided to use it.
+The second reason is I&rsquo;m working mostly with a Macbook but I study with an Ubuntu and I tried to create a solution that works in both scenarios.</p>
+<h5 id="why-golang">Why Golang?</h5>
+<p>It&rsquo;s simple, as long I decided to ship the solution on a Raspberry Pi, Golang fits very well to produce a binary that runs on the Raspberry Pi without any virtual machine or system dependency.
+Also, the Golang compiler is awesome, I didn&rsquo;t have any problem compiling to Raspberry Pi (and I love to write Golang code).</p>
+<h3 id="the-shell-script">The Shell Script</h3>
+<p>Let&rsquo;s talk about the shell script.
+As I said before, I&rsquo;m using Ubuntu with Gnome, so I can use the <a href="https://linux.die.net/man/1/xprop">xprop</a> utility to get some information about the focused window of the X server.
+The usage of <em>xprop</em> utility is simple, f.ex:</p>
+<pre><code>$ xprop -root _NET_ACTIVE_WINDOW
+_NET_ACTIVE_WINDOW(WINDOW): window id # 0x3c0000a
+</code></pre><p>The important thing on that output is the window id <strong>0x3c0000a</strong>.
+With that id we can dig through the window information, f.ex:</p>
+<pre><code>$ xprop -id 0x3c0000a WM_CLASS
+WM_CLASS(STRING) = &quot;gnome-terminal-server&quot;, &quot;Gnome-terminal&quot;
+</code></pre><p>As you can see, now we have the name of the focused window, but we still need to know the title of the window to specify what we&rsquo;re doing in that application.
+In the previous command we asked for <em>the class</em> of the window <em>0x3c0000a</em> however we can ask for the <em>name</em> of the window (or title), f.ex:</p>
+<pre><code>$ xprop -id 0x3c0000a WM_NAME
+WM_NAME(STRING) = &quot;default - zsh&quot;
+</code></pre><p>I&rsquo;m using Tmux with ZSH while I write this blog post, so the <strong>default</strong> is the name of my Tmux session, and the <strong>zsh</strong> is the currently running application on the <em>gnome-terminal-server</em>.
+Now that we have all the information we need, we can send it somewhere with <em>curl</em>.</p>
+<pre><code>$ curl -v -H &quot;Content-Type: application/json&quot; -d \
+    &quot;{\&quot;class\&quot;: \&quot;$window_class\&quot;, \&quot;title\&quot;: \&quot;$window_title\&quot;}&quot; \
+    $ENDPOINT
+</code></pre><h3 id="the-go-api">The Go API</h3>
+<p>This is our <em>business logic layer</em>, in this API we interpret the data from the collector shell script and persist it into InfluxDB.
+But, don&rsquo;t be scared, this is a very simple (maybe a naive) API made only with the Golang standard library.
+There&rsquo;re three main functions on that API to solve our problem:</p>
+<ol>
+<li>A HTTP handler to receive the collector&rsquo;s requests.</li>
+<li>A transformation layer to convert incoming data into the score rules.</li>
+<li>A InfluxDB <em>write-only</em> client.</li>
+</ol>
+<p>A simplified version of the handle contains less than 15 LOC:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Server</span><span class="p">)</span> <span class="nf">track</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">d</span> <span class="nx">requestData</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Body</span><span class="p">).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">d</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="c1">// error handling for a &#34;Bad Request&#34;
+</span><span class="c1"></span>	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">client</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">Class</span><span class="p">,</span> <span class="nx">d</span><span class="p">.</span><span class="nx">Title</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="c1">// error handling data processing and saving data on influxdb
+</span><span class="c1"></span>	<span class="p">}</span>
+	<span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusNoContent</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>The <code>client</code> is our InfluxDB client.
+Before we getting through the InfluxDB client let&rsquo;s take a look at the transformation layer (that&rsquo;s the ugly layer of this API).</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nf">convertToMetric</span><span class="p">(</span><span class="nx">class</span><span class="p">,</span> <span class="nx">title</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">metric</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">class</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="s">&#34;gnome-terminal-server&#34;</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">metric</span><span class="p">{</span>
+			<span class="nx">category</span><span class="p">:</span> <span class="nx">WORK_CATEGORY</span><span class="p">,</span>
+			<span class="nx">app</span><span class="p">:</span>      <span class="nf">convertTerminalAppName</span><span class="p">(</span><span class="nx">title</span><span class="p">),</span>
+		<span class="p">}</span>
+	<span class="k">case</span> <span class="s">&#34;Navigator&#34;</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">metric</span><span class="p">{</span>
+			<span class="nx">category</span><span class="p">:</span> <span class="nf">convertBrowserCategory</span><span class="p">(</span><span class="nx">title</span><span class="p">),</span>
+			<span class="nx">app</span><span class="p">:</span>      <span class="s">&#34;FireFox&#34;</span><span class="p">,</span>
+		<span class="p">}</span>
+	<span class="k">case</span> <span class="s">&#34;telegram&#34;</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">metric</span><span class="p">{</span>
+			<span class="nx">category</span><span class="p">:</span> <span class="nx">SOCIAL_CATEGORY</span><span class="p">,</span>
+			<span class="nx">app</span><span class="p">:</span>      <span class="nx">class</span><span class="p">,</span>
+		<span class="p">}</span>
+	<span class="k">case</span> <span class="s">&#34;Steam&#34;</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">metric</span><span class="p">{</span>
+			<span class="nx">category</span><span class="p">:</span> <span class="nx">GAME_CATEGORY</span><span class="p">,</span>
+			<span class="nx">app</span><span class="p">:</span>      <span class="s">&#34;Steam&#34;</span><span class="p">,</span>
+		<span class="p">}</span>
+	<span class="k">default</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">metric</span><span class="p">{</span><span class="nx">category</span><span class="p">:</span> <span class="nx">UNKNOWN_CATEGORY</span><span class="p">,</span> <span class="nx">app</span><span class="p">:</span> <span class="nx">title</span><span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>Every rule of the project is described above, for example, if the collector sends a request like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span><span class="nt">&#34;class&#34;</span><span class="p">:</span> <span class="s2">&#34;gnome-terminal-server&#34;</span><span class="p">,</span> <span class="nt">&#34;title&#34;</span><span class="p">:</span> <span class="s2">&#34;default - vim&#34;</span><span class="p">}</span>
+</code></pre></div><p>The converter will return a metric with the <code>WORK_CATEGORY</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="nx">metric</span><span class="p">{</span>
+    <span class="nx">category</span><span class="p">:</span> <span class="nx">category</span><span class="p">{</span><span class="nx">name</span><span class="p">:</span> <span class="s">&#34;work&#34;</span><span class="p">,</span> <span class="nx">score</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+    <span class="nx">app</span>     <span class="p">:</span> <span class="s">&#34;vim&#34;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div><p>There&rsquo;re other rules like verify if the current tab focused on the browser is a social site or not but, you get the idea.
+So, back to the InfluxDB client, actually the InfluxDB has a friendly REST API and because of that I decided to avoid big dependencies and solve the persistence layer with a simple <em>HTTP POST</em>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Client</span><span class="p">)</span> <span class="nf">Write</span><span class="p">(</span><span class="nx">class</span><span class="p">,</span> <span class="nx">title</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Post</span><span class="p">(</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%s/write?db=%s&#34;</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">endpoint</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">database</span><span class="p">),</span>
+		<span class="s">&#34;&#34;</span><span class="p">,</span>
+		<span class="nf">buildPayload</span><span class="p">(</span><span class="nx">class</span><span class="p">,</span> <span class="nx">title</span><span class="p">),</span>
+	<span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">resp</span><span class="p">.</span><span class="nx">StatusCode</span> <span class="o">!=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">StatusNoContent</span> <span class="p">{</span>
+        <span class="c1">// boring error handling
+</span><span class="c1"></span>	<span class="p">}</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>Yeah, simple as pie.
+If you&rsquo;re curious about the payload, here&rsquo;s an example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ini" data-lang="ini"><span class="na">productivity,category</span><span class="o">=</span><span class="s">&#34;work&#34;,app=&#34;vim&#34; value=1</span>
+</code></pre></div><p>The last thing I want to share about the Go API is the compilation step.
+I deployed that API on a Raspberry Pi 1 and according to <a href="https://github.com/golang/go/wiki/GoArm">Golang Wiki</a>, to compile to <em>ARMv6</em> CPU architecture we need to pass the environment variable <code>GOARM=6</code> on the build command (and the env <code>GOARCH=arm</code> too).</p>
+<pre><code>$ GOARCH=arm GOARM=6 go build
+</code></pre><h3 id="influxdb">InfluxDB</h3>
+<p>There&rsquo;re no tricks to get InfluxDB up and running on the Raspberry Pi, the straightforward <code>apt install influxdb</code> solves the problem.
+After the installation process, I created the database and set the <em>retention policy</em> to keep only one week of data (it&rsquo;s enough for what I&rsquo;m looking for).</p>
+<pre><code>$ influx
+Connected to http://localhost:8086 version 1.8.4
+InfluxDB shell version: 1.8.4
+&gt; CREATE DATABASE productivity
+&gt; USE productivity
+&gt; CREATE RETENTION POLICY &quot;1week&quot; on &quot;productivity&quot; DURATION 7d REPLICATION 1
+</code></pre><h3 id="grafana">Grafana</h3>
+<p>However to install Grafana on the Raspberry Pi 1 there&rsquo;s a trick, the default version of Grafana&rsquo;s Debian package is built for the <em>ARMv7</em> architecture (its means that a simple <code>apt install grafana</code> doesn&rsquo;t work), but the DietPi has the <code>dietpi-software</code> application that enables you to select an optimized installation of some software for the Raspberry Pi with DietPi OS.
+So I just installed Grafana from that and everything works well.
+As long the Grafana and the InfluxDB are up and running I created the InfluxDB data source on the Grafana and start &ldquo;to draw&rdquo; the dashboard.</p>
+<h4 id="all-activities-panel">All Activities Panel</h4>
+<p>For the <em>All Activities Panel</em> I used a graph visualization with bars as display option and the following query:</p>
+<pre><code>SELECT count(&quot;value&quot;) as minutes FROM &quot;productivity&quot; WHERE $timeFilter GROUP BY time(1h),category
+</code></pre><h4 id="score-panel">Score Panel</h4>
+<p>The <em>Score</em> panel is a gauger that calculates the <em>mean</em> of the following query:</p>
+<pre><code>SELECT mean(&quot;value&quot;) * 100 FROM &quot;productivity&quot; WHERE $timeFilter GROUP BY time($interval) fill(null)
+</code></pre><p>I multiplied to 100 to get the gauger working like a &ldquo;percentage&rdquo;.</p>
+<h4 id="app-details-panel">App Details Panel</h4>
+<p><em>App Details</em> panel shows the name of apps with the time spending with them. It&rsquo;s a table panel and I&rsquo;m using the following query:</p>
+<pre><code>SELECT count(&quot;value&quot;) FROM &quot;productivity&quot; WHERE $timeFilter GROUP BY time($interval), app fill(null)
+</code></pre><h4 id="top-unknown">Top Unknown</h4>
+<p>And the last one is the <em>top unknown</em> panel, a panel to show the apps that are still uncategorized</p>
+<pre><code>SELECT count(value) FROM &quot;productivity&quot; WHERE $timeFilter and category = '&quot;unknown&quot;' GROUP BY app
+</code></pre><h3 id="turning-the-go-api-into-a-linux-service">Turning the Go API into a Linux service</h3>
+<p>To keep the Go API up and running I created a systemd service.
+To do that I created a file named <code>productivity.service</code> on directory <code>/etc/systemd/system/</code> with this content:</p>
+<div class="highlight"><pre class="chroma"><code class="language-ini" data-lang="ini"><span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">The Productivity Tracker API</span>
+
+<span class="k">[Service]</span>
+<span class="na">User</span><span class="o">=</span><span class="s">tracker</span>
+<span class="na">WorkingDirectory</span><span class="o">=</span><span class="s">/home/productivity/app</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/home/tracker/app/productivity</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">always</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</code></pre></div><p>After that, I added the service and started it</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$ systemctl <span class="nb">enable</span> productivity.service
+$ systemctl start productivity.service
+</code></pre></div><h2 id="the-source-code">The Source Code</h2>
+<p>I pushed everything of this POC to a <a href="https://github.com/drgarcia1986/drgarcia1986.github.io/tree/samples/building-a-personal-activity-tracker">Github repo</a> but if you want to use it, you&rsquo;ll need to do some changes (this project was made to help me with my productivity and to have some fun).
+I know it&rsquo;s weird but I named this project as <a href="https://vikings.fandom.com/wiki/Floki">Floki</a>, I thought Floki is a better name than <em>productivity</em> or <em>tracker</em>.</p>
+</article>
+
+        </main><footer id="footer">
+    Copyright © 2021 Diego Garcia
+</footer>
+</body>
+</html>
