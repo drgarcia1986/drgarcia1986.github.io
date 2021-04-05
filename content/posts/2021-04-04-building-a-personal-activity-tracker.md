@@ -233,7 +233,7 @@ Description=The Productivity Tracker API
 
 [Service]
 User=tracker
-WorkingDirectory=/home/productivity/app
+WorkingDirectory=/home/tracker/app
 ExecStart=/home/tracker/app/productivity
 Restart=always
 
