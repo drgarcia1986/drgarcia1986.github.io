@@ -25,3 +25,4 @@ jobs:
           user_name: drgarcia1986
           user_email: drgarcia1986@gmail.com
           publish_branch: gh-pages
+          cname: dgarcia.dev
