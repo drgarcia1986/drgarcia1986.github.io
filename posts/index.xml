@@ -6,9 +6,22 @@
     <description>Recent content in Posts on Reinventing The Wheel</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
-    <lastBuildDate>Sun, 04 Apr 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 07 Apr 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Playing with Go and Generics</title>
+      <link>/playing-with-go-and-generics/</link>
+      <pubDate>Wed, 07 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/playing-with-go-and-generics/</guid>
+      <description>Yes, it&amp;rsquo;s happening! The proposal to add generics to Golang was accepted. It means that in some versions in the future, we&amp;rsquo;ll be able to code generic solutions without having to use complex workarounds with the empty interface{}. But, how it works?
+TLDR: Now there&amp;rsquo;s a type parameter described with square brackets to define generics types for structs, functions, etc. For instance:
+func Print[T any](s []T) { for _, v := range s { fmt.</description>
+    </item>
     
     
     

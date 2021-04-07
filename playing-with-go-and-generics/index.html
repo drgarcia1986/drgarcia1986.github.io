@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reinventing the wheel to learn how a wheel works">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Playing with Go and Generics</title>
+</head>
+<body><header id="banner">
+    <h2><a href="/">Reinventing The Wheel</a></h2>
+    <nav>
+        <ul>
+            <li>
+                <a href="/" title="posts">posts</a>
+            </li><li>
+                <a href="/about/" title="">about</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Playing with Go and Generics</h1><time>April 7, 2021</time></header><p>Yes, it&rsquo;s happening!
+The <a href="https://go.googlesource.com/proposal/+/refs/heads/master/design/43651-type-parameters.md">proposal to add generics</a> to Golang was <a href="https://github.com/golang/go/issues/43651#issuecomment-776944155">accepted</a>.
+It means that in some versions in the future, we&rsquo;ll be able to code generic solutions without having to use complex workarounds with the empty <code>interface{}</code>.
+But, how it works?</p>
+<p><strong>TLDR</strong>: Now there&rsquo;s a <em>type parameter</em> described with square brackets to define generics types for structs, functions, etc.
+For instance:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nx">Print</span><span class="p">[</span><span class="nx">T</span> <span class="nx">any</span><span class="p">](</span><span class="nx">s</span> <span class="p">[]</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Print</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p><em>The keyword <code>any</code> means that the type <code>T</code> can be any type</em></p>
+<p>With the previous notation we can use a slice of any type in an explicit way:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nf">Print</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;Hello, &#34;</span><span class="p">,</span> <span class="s">&#34;World\n&#34;</span><span class="p">})</span>
+	<span class="nf">Print</span><span class="p">([]</span><span class="kt">int</span><span class="p">{</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">})</span>
+<span class="p">}</span>
+</code></pre></div><p>And will work like a charm:</p>
+<pre><code>Hello, World
+42
+</code></pre><p>Let&rsquo;s take a look at some classics data structures implemented in go with generics.</p>
+<h2 id="queue">Queue</h2>
+<p>We can start with a simple <em>queue</em> implementation:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">type</span> <span class="nx">Queue</span><span class="p">[</span><span class="nx">T</span> <span class="nx">any</span><span class="p">]</span> <span class="p">[]</span><span class="nx">T</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">Queue</span><span class="p">[</span><span class="nx">T</span><span class="p">])</span> <span class="nf">enqueue</span><span class="p">(</span><span class="nx">v</span> <span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="o">*</span><span class="nx">q</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="o">*</span><span class="nx">q</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">Queue</span><span class="p">[</span><span class="nx">T</span><span class="p">])</span> <span class="nf">dequeue</span><span class="p">()</span> <span class="p">(</span><span class="nx">T</span><span class="p">,</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="o">*</span><span class="nx">q</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="kd">var</span> <span class="nx">v</span> <span class="nx">T</span>
+		<span class="k">return</span> <span class="nx">v</span><span class="p">,</span> <span class="kc">false</span>
+	<span class="p">}</span>
+	<span class="nx">v</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">q</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="o">*</span><span class="nx">q</span> <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">q</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+	<span class="k">return</span> <span class="nx">v</span><span class="p">,</span> <span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div><p>When we testing the <em>generic queue</em> with <code>string</code> type:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">q</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">Queue</span><span class="p">[</span><span class="kt">string</span><span class="p">])</span>
+	<span class="nx">q</span><span class="p">.</span><span class="nf">enqueue</span><span class="p">(</span><span class="s">&#34;item-1&#34;</span><span class="p">)</span>
+	<span class="nx">q</span><span class="p">.</span><span class="nf">enqueue</span><span class="p">(</span><span class="s">&#34;item-2&#34;</span><span class="p">)</span>
+	<span class="nx">q</span><span class="p">.</span><span class="nf">enqueue</span><span class="p">(</span><span class="s">&#34;item-3&#34;</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">q</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">q</span><span class="p">.</span><span class="nf">dequeue</span><span class="p">())</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">q</span><span class="p">.</span><span class="nf">dequeue</span><span class="p">())</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">q</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>We got the following output:</p>
+<pre><code>&amp;[reg-1 reg-2 reg-3]
+reg-1 true
+reg-2 true
+&amp;[reg-3]
+</code></pre><h2 id="stack">Stack</h2>
+<p>If we try a <em>Stack</em>?:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">type</span> <span class="nx">Stack</span><span class="p">[</span><span class="nx">T</span> <span class="nx">any</span><span class="p">]</span> <span class="p">[]</span><span class="nx">T</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Stack</span><span class="p">[</span><span class="nx">T</span><span class="p">])</span> <span class="nf">push</span><span class="p">(</span><span class="nx">v</span> <span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="o">*</span><span class="nx">s</span> <span class="p">=</span> <span class="nb">append</span><span class="p">([]</span><span class="nx">T</span><span class="p">{</span><span class="nx">v</span><span class="p">},</span> <span class="p">(</span><span class="o">*</span><span class="nx">s</span><span class="p">)</span><span class="o">...</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Stack</span><span class="p">[</span><span class="nx">T</span><span class="p">])</span> <span class="nf">pop</span><span class="p">()</span> <span class="p">(</span><span class="nx">T</span><span class="p">,</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="o">*</span><span class="nx">s</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="kd">var</span> <span class="nx">v</span> <span class="nx">T</span>
+		<span class="k">return</span> <span class="nx">v</span><span class="p">,</span> <span class="kc">false</span>
+	<span class="p">}</span>
+	<span class="nx">v</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">s</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="o">*</span><span class="nx">s</span> <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">s</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+	<span class="k">return</span> <span class="nx">v</span><span class="p">,</span> <span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div><p>What about test using <code>int</code>?:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">s</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">Stack</span><span class="p">[</span><span class="kt">int</span><span class="p">])</span>
+	<span class="nx">s</span><span class="p">.</span><span class="nf">push</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="nx">s</span><span class="p">.</span><span class="nf">push</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+	<span class="nx">s</span><span class="p">.</span><span class="nf">push</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nf">pop</span><span class="p">())</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nf">pop</span><span class="p">())</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>No big deal:</p>
+<pre><code>&amp;[3 2 1]
+3 true
+2 true
+&amp;[1]
+</code></pre><h2 id="linked-list">Linked List</h2>
+<p>Maybe a <em>Linked List</em>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">type</span> <span class="nx">Node</span><span class="p">[</span><span class="nx">T</span> <span class="nx">any</span><span class="p">]</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">data</span> <span class="nx">T</span>
+	<span class="nx">next</span> <span class="o">*</span><span class="nx">Node</span><span class="p">[</span><span class="nx">T</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">LinkedList</span><span class="p">[</span><span class="nx">T</span> <span class="nx">any</span><span class="p">]</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">head</span> <span class="o">*</span><span class="nx">Node</span><span class="p">[</span><span class="nx">T</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">l</span> <span class="o">*</span><span class="nx">LinkedList</span><span class="p">[</span><span class="nx">T</span><span class="p">])</span> <span class="nf">add</span><span class="p">(</span><span class="nx">data</span> <span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">node</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Node</span><span class="p">[</span><span class="nx">T</span><span class="p">]{</span><span class="nx">data</span><span class="p">:</span> <span class="nx">data</span><span class="p">}</span>
+	<span class="k">if</span> <span class="nx">l</span><span class="p">.</span><span class="nx">head</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">l</span><span class="p">.</span><span class="nx">head</span> <span class="p">=</span> <span class="nx">node</span>
+		<span class="k">return</span>
+	<span class="p">}</span>
+	<span class="nx">current</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">head</span>
+	<span class="k">for</span> <span class="nx">current</span><span class="p">.</span><span class="nx">next</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">current</span> <span class="p">=</span> <span class="nx">current</span><span class="p">.</span><span class="nx">next</span>
+	<span class="p">}</span>
+	<span class="nx">current</span><span class="p">.</span><span class="nx">next</span> <span class="p">=</span> <span class="nx">node</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">l</span> <span class="o">*</span><span class="nx">LinkedList</span><span class="p">[</span><span class="nx">T</span><span class="p">])</span> <span class="nb">print</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">current</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">head</span>
+	<span class="k">for</span> <span class="nx">current</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">current</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+		<span class="nx">current</span> <span class="p">=</span> <span class="nx">current</span><span class="p">.</span><span class="nx">next</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>A bit more of code I agree but there&rsquo;s no secrets:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">ll</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">LinkedList</span><span class="p">[</span><span class="kt">float32</span><span class="p">])</span>
+	<span class="nx">ll</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="mf">1.01</span><span class="p">)</span>
+	<span class="nx">ll</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="mf">2.02</span><span class="p">)</span>
+	<span class="nx">ll</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="mf">3.03</span><span class="p">)</span>
+	<span class="nx">ll</span><span class="p">.</span><span class="nb">print</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div><p>Everything works as expected:</p>
+<pre><code>1.01
+2.02
+3.03
+</code></pre><p>It looks a little strange on the first try, but I can get used to it.</p>
+<h2 id="a-more-restrictive-example">A more restrictive example</h2>
+<p>We can define a more restrictive set of types that a generic type can use.</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">type</span> <span class="nx">Number</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="kd">type</span> <span class="kt">int</span><span class="p">,</span> <span class="kt">float32</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">sum</span><span class="p">[</span><span class="nx">T</span> <span class="nx">Number</span><span class="p">](</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span> <span class="nx">T</span><span class="p">)</span> <span class="nx">T</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span>
+<span class="p">}</span>
+</code></pre></div><p>For <code>int</code> and <code>float32</code> that function works fine:</p>
+<div class="highlight"><pre class="chroma"><code class="language-golang" data-lang="golang"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nf">sum</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">sum</span><span class="p">[</span><span class="kt">float32</span><span class="p">](</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div><p>But if we try with <code>strings</code> for example, the code won&rsquo;t compile:</p>
+<pre><code>string does not satisfy Number (string or string not found in int, float32)
+</code></pre><h2 id="try-it-yourself">Try It Yourself!</h2>
+<p>You can play with generics in go by yourself by <a href="https://go.googlesource.com/go/+/refs/heads/dev.go2go/README.go2go.md">build from the source</a> or in <a href="https://go2goplay.golang.org/">The Go2Go Playground</a>.</p>
+</article>
+
+        </main><footer id="footer">
+    Copyright © 2021 Diego Garcia
+</footer>
+</body>
+</html>
