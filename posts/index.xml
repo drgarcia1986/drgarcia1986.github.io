@@ -6,9 +6,21 @@
     <description>Recent content in Posts on Reinventing The Wheel</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
-    <lastBuildDate>Wed, 07 Apr 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 04 May 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Programming Kubernetes - Running Pods</title>
+      <link>/programming-kubernetes-running-pods/</link>
+      <pubDate>Tue, 04 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/programming-kubernetes-running-pods/</guid>
+      <description>This is the first post of a series I want to publish about interact with the Kubernetes programmatic instead of using kubectl for example. In this first post we&amp;rsquo;ll create an API that runs an individual pod and returns the exit code with the stdout of the execution, something like that:
+$ curl -i -d \ &#39;{&amp;quot;image&amp;quot;: &amp;quot;python:3.7.0&amp;quot;, &amp;quot;command&amp;quot;: &amp;quot;python&amp;quot;,\ &amp;quot;args&amp;quot;: [&amp;quot;-c&amp;quot;, &amp;quot;print(\&amp;quot;Hello World\&amp;quot;)&amp;quot;]}&#39;\ http://api-endpoint/ HTTP/1.1 200 OK Content-Length: 41 Content-Type: application/json; charset=utf-8 {&amp;quot;exit_code&amp;quot;: 0, &amp;quot;output&amp;quot;: &amp;quot;Hello World&amp;quot;} Explaining the request payload:</description>
+    </item>
     
     
     
