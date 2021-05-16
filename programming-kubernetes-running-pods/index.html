@@ -107,7 +107,7 @@ kube-system
 <li><code>k8s.CoreV1().Namespaces().List(...)</code>: And finally we perform a query on Kubernetes API (same as <code>kubectl get ns</code>).</li>
 </ul>
 <p>A note here, we&rsquo;re consuming the Kubernetes API outside the cluster, later on, in a new blog post, we&rsquo;ll deploy an application inside the Kubernetes with a <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/">service-account</a>.
-When we do that we don&rsquo;t need to inform where&rsquo;s the config yaml file.</p>
+When we do that, we don&rsquo;t need to inform where&rsquo;s the config yaml file.</p>
 <h3 id="creating-and-running-pod">Creating and Running Pod</h3>
 <p>Now things start to get excited.
 We&rsquo;ll create a pod manifest in the same way that you would but programmatic.</p>
