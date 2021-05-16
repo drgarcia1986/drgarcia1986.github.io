@@ -104,7 +104,7 @@ kube-system
 <ul>
 <li><code>clientcmd.BuildConfigFromFlags(...)</code>: We take the Kubernetes access configuration from the <code>~/.kube/config</code> yaml file (the same as the kubectl use).</li>
 <li><code>kubernetes.NewForConfig(...)</code>: We create a new k8s client based on the previous configuration.</li>
-<li><code>k8s.CoreV1().Namespaces().List(...)</code>: And finally we perform a query on Kubernetes API (same as <code>kubectl get ns</code>).</li>
+<li><code>k8s.CoreV1().Namespaces().List(...)</code>: And finally, we perform a query on Kubernetes API (same as <code>kubectl get ns</code>).</li>
 </ul>
 <p>A note here, we&rsquo;re consuming the Kubernetes API outside the cluster, later on, in a new blog post, we&rsquo;ll deploy an application inside the Kubernetes with a <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/">service-account</a>.
 When we do that, we don&rsquo;t need to inform where&rsquo;s the config yaml file.</p>
