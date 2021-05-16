@@ -3,22 +3,17 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>/posts/</loc>
-    <lastmod>2021-05-04T00:00:00+00:00</lastmod>
+    <loc>/playing-with-go-and-generics/</loc>
+    <lastmod>2021-04-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/programming-kubernetes-running-pods/</loc>
-    <lastmod>2021-05-04T00:00:00+00:00</lastmod>
+    <loc>/posts/</loc>
+    <lastmod>2021-04-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2021-05-04T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/playing-with-go-and-generics/</loc>
     <lastmod>2021-04-07T00:00:00+00:00</lastmod>
   </url>
   
