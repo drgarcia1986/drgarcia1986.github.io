@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reinventing the wheel to learn how a wheel works">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Programming Kubernetes - Running Pods</title>
+</head>
+<body><header id="banner">
+    <h2><a href="/">Reinventing The Wheel</a></h2>
+    <nav>
+        <ul>
+            <li>
+                <a href="/" title="posts">posts</a>
+            </li><li>
+                <a href="/about/" title="">about</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Programming Kubernetes - Running Pods</h1><time>May 15, 2021</time></header><p>This is the first post of a series I want to publish about interact with the Kubernetes programmatic instead of using kubectl for example.
+In this first post, we&rsquo;ll create an API that runs an individual pod and returns the exit code with the stdout of the execution,
+something like that:</p>
+<pre><code>$ curl -i -d \
+    '{&quot;image&quot;: &quot;python:3.7.0&quot;, &quot;command&quot;: &quot;python&quot;,\
+    &quot;args&quot;: [&quot;-c&quot;, &quot;print(\&quot;Hello World\&quot;)&quot;]}'\
+    http://api-endpoint/
+
+HTTP/1.1 200 OK
+Content-Length: 41
+Content-Type: application/json; charset=utf-8
+
+{&quot;exit_code&quot;: 0, &quot;output&quot;: &quot;Hello World\n&quot;}
+</code></pre><p>Explaining the request payload:</p>
+<ul>
+<li><strong>image</strong>: the container image.</li>
+<li><strong>command</strong>: main command the container will execute.</li>
+<li><strong>args</strong>: the command arguments.</li>
+</ul>
+<p>And the response payload:</p>
+<ul>
+<li><strong>exit code</strong>: the container exit code.</li>
+<li><strong>output</strong>: the stdout of container</li>
+</ul>
+<h3 id="the-stack">The Stack</h3>
+<p>We will use Golang with <a href="https://github.com/kubernetes/client-go">client-go</a> library to do that.
+But why? First of all, Kubernetes is written in Go and the <em>client-go</em> is the official library used on Kubernetes ecosystem, so, there&rsquo;s no
+reason to use another library or consuming api-server via REST requests, but, if you hate Golang, there&rsquo;re other options, like
+<a href="https://github.com/kubernetes-client/python">client-python</a> for example.
+Also, I&rsquo;m using minikube with Kubernetes 1.18, but, feel free to select your Kubernetes installation.</p>
+<h3 id="code-snippets">Code snippets</h3>
+<p>All the snippets on this post are simplified to archive better readability but don&rsquo;t be angry, all codes are available <a href="https://github.com/drgarcia1986/drgarcia1986.github.io/tree/samples/programming-kubernetes-running-pods">here</a>.</p>
+<h3 id="adding-the-kubernetes-client">Adding the Kubernetes Client</h3>
+<p>Let&rsquo;s prepare our environment to talk to Kubernetes API, starting by add <em>client-go</em> library.
+Assuming you start this project by running the <code>go mod init</code> command, you can run <code>go get k8s.io/client-go@latest</code> on the same directory of the <code>go.mod</code> file
+to get the last version of the library.</p>
+<p>After that let&rsquo;s create an ultra simple Golang code that lists the Kubernetes cluster namespaces (just to validate the communication with the api-server).</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;context&#34;</span>
+    <span class="s">&#34;fmt&#34;</span>
+
+    <span class="nx">metav1</span> <span class="s">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
+    <span class="s">&#34;k8s.io/client-go/kubernetes&#34;</span>
+    <span class="s">&#34;k8s.io/client-go/tools/clientcmd&#34;</span>
+    <span class="s">&#34;k8s.io/client-go/util/homedir&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">cfg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientcmd</span><span class="p">.</span><span class="nf">BuildConfigFromFlags</span><span class="p">(</span>
+        <span class="s">&#34;&#34;</span><span class="p">,</span>
+        <span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">homedir</span><span class="p">.</span><span class="nf">HomeDir</span><span class="p">(),</span> <span class="s">&#34;.kube&#34;</span><span class="p">,</span> <span class="s">&#34;config&#34;</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+
+    <span class="nx">k8s</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kubernetes</span><span class="p">.</span><span class="nf">NewForConfig</span><span class="p">(</span><span class="nx">cfg</span><span class="p">)</span>
+    <span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+
+    <span class="nx">nsList</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">k8s</span><span class="p">.</span><span class="nf">CoreV1</span><span class="p">().</span>
+        <span class="nf">Namespaces</span><span class="p">().</span>
+        <span class="nf">List</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">metav1</span><span class="p">.</span><span class="nx">ListOptions</span><span class="p">{})</span>
+    <span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">n</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">nsList</span><span class="p">.</span><span class="nx">Items</span> <span class="p">{</span>
+    	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">n</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>Before you run this code, don&rsquo;t forget to run <code>go mod tidy</code> to normalize dependencies on the <code>go.mod</code> file.</p>
+<p>And, the magic happens:</p>
+<pre><code>$ go run main.go
+default
+kube-node-lease
+kube-public
+kube-system
+</code></pre><p>Let&rsquo;s take a look at the important parts of that code:</p>
+<ul>
+<li><code>clientcmd.BuildConfigFromFlags(...)</code>: We take the Kubernetes access configuration from the <code>~/.kube/config</code> yaml file (the same as the kubectl use).</li>
+<li><code>kubernetes.NewForConfig(...)</code>: We create a new k8s client based on the previous configuration.</li>
+<li><code>k8s.CoreV1().Namespaces().List(...)</code>: And finally we perform a query on Kubernetes API (same as <code>kubectl get ns</code>).</li>
+</ul>
+<p>A note here, we&rsquo;re consuming the Kubernetes API outside the cluster, later on, in a new blog post, we&rsquo;ll deploy an application inside the Kubernetes with a <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/">service-account</a>.
+When we do that we don&rsquo;t need to inform where&rsquo;s the config yaml file.</p>
+<h3 id="creating-and-running-pod">Creating and Running Pod</h3>
+<p>Now things start to get excited.
+We&rsquo;ll create a pod manifest in the same way that you would but programmatic.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">pod</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Pod</span><span class="p">{</span>
+    <span class="nx">ObjectMeta</span><span class="p">:</span> <span class="nx">metav1</span><span class="p">.</span><span class="nx">ObjectMeta</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;rtw&#34;</span><span class="p">},</span>
+    <span class="nx">Spec</span><span class="p">:</span> <span class="nx">v1</span><span class="p">.</span><span class="nx">PodSpec</span><span class="p">{</span>
+        <span class="nx">RestartPolicy</span><span class="p">:</span> <span class="nx">v1</span><span class="p">.</span><span class="nx">RestartPolicyNever</span><span class="p">,</span>
+        <span class="nx">Containers</span><span class="p">:</span> <span class="p">[]</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Container</span><span class="p">{</span>
+            <span class="nx">v1</span><span class="p">.</span><span class="nx">Container</span><span class="p">{</span>
+                <span class="nx">Name</span><span class="p">:</span>    <span class="s">&#34;main&#34;</span><span class="p">,</span>
+                <span class="nx">Image</span><span class="p">:</span>   <span class="s">&#34;python:3.8&#34;</span><span class="p">,</span>
+                <span class="nx">Command</span><span class="p">:</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;python&#34;</span><span class="p">},</span>
+                <span class="nx">Args</span><span class="p">:</span>    <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;-c&#34;</span><span class="p">,</span> <span class="s">&#34;print(&#39;hello world&#39;)&#34;</span><span class="p">},</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div><p>And use the Kubernetes client we created before to create the pod on the cluster:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">k8s</span><span class="p">.</span><span class="nf">CoreV1</span><span class="p">().</span><span class="nf">Pods</span><span class="p">(</span><span class="s">&#34;default&#34;</span><span class="p">).</span><span class="nf">Create</span><span class="p">(</span>
+    <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span>
+    <span class="nx">pod</span><span class="p">,</span>
+    <span class="nx">metav1</span><span class="p">.</span><span class="nx">CreateOptions</span><span class="p">{},</span>
+<span class="p">)</span>
+</code></pre></div><p>That&rsquo;s it! If you run this code you&rsquo;ll be able to see a beautifully <code>hello world</code> coming from our python container:</p>
+<pre><code>$ kubectl get pods
+NAME   READY   STATUS      RESTARTS   AGE
+rtw    0/1     Completed   0          3s
+
+$ kubectl logs rtw main
+hello world
+</code></pre><h3 id="getting-exit-code">Getting Exit Code</h3>
+<p>To get the container exit code there&rsquo;s no magic or beautiful path, we need to polling Kubernetes API until the container execution terminates.
+Luckily we can use the helper <code>PollImmediate</code> from <code>apimachinery</code> to perform the polling with backoff and timeout.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;context&#34;</span>
+    <span class="s">&#34;fmt&#34;</span>
+    <span class="s">&#34;time&#34;</span>
+
+    <span class="nx">metav1</span> <span class="s">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
+    <span class="s">&#34;k8s.io/apimachinery/pkg/util/wait&#34;</span>
+<span class="p">)</span>
+
+<span class="o">...</span>
+
+<span class="kd">var</span> <span class="nx">exitCode</span> <span class="kt">int32</span>
+<span class="nx">cli</span> <span class="o">:=</span> <span class="nx">k8s</span><span class="p">.</span><span class="nf">CoreV1</span><span class="p">().</span><span class="nf">Pods</span><span class="p">(</span><span class="s">&#34;default&#34;</span><span class="p">)</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">wait</span><span class="p">.</span><span class="nf">PollImmediate</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">(</span><span class="kt">bool</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">p</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;rtw&#34;</span><span class="p">,</span> <span class="nx">metav1</span><span class="p">.</span><span class="nx">GetOptions</span><span class="p">{})</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">err</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">Status</span><span class="p">.</span><span class="nx">ContainerStatuses</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Status</span><span class="p">.</span><span class="nx">ContainerStatuses</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">State</span>
+    <span class="k">if</span> <span class="nx">state</span><span class="p">.</span><span class="nx">Terminated</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">exitCode</span> <span class="p">=</span> <span class="nx">state</span><span class="p">.</span><span class="nx">Terminated</span><span class="p">.</span><span class="nx">ExitCode</span>
+        <span class="k">return</span> <span class="kc">true</span><span class="p">,</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">})</span>
+<span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Container Exit Code: %d\n&#34;</span><span class="p">,</span> <span class="nx">exitCode</span><span class="p">)</span>
+</code></pre></div><p><em>PollImmediate</em> will execute our anonymous function until return <code>true</code>, or an <code>error</code>, or reach the timeout (second arg).</p>
+<p>So, what&rsquo;s happening here?
+We&rsquo;re getting pod information looking for the status of the main container (we created that pod with only one container).
+When Kubernetes API returns the status of the container, we check if the container is terminated, if yes, we get the exit code of it.</p>
+<pre><code>Container Exit Code: 0
+</code></pre><h3 id="getting-stdout">Getting StdOut</h3>
+<p>OK, we already know the container exit code, now it&rsquo;s time to get the stdout, to do that, we&rsquo;ll get the logs from the container.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">stdout</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">k8s</span><span class="p">.</span><span class="nf">CoreV1</span><span class="p">().</span>
+    <span class="nf">Pods</span><span class="p">(</span><span class="s">&#34;default&#34;</span><span class="p">).</span>
+    <span class="nf">GetLogs</span><span class="p">(</span><span class="s">&#34;rtw&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">v1</span><span class="p">.</span><span class="nx">PodLogOptions</span><span class="p">{}).</span>
+    <span class="nf">Do</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()).</span>
+    <span class="nf">Raw</span><span class="p">()</span>
+
+<span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">stdout</span><span class="p">))</span>
+</code></pre></div><p>Easy, right? The code above works as same as <code>kubectl logs</code>:</p>
+<pre><code>$ kubectl logs rtw main
+hello world
+</code></pre><h3 id="deleting-the-pod">Deleting the Pod</h3>
+<p>We have all we need to build our API, but before we move, don&rsquo;t forget to delete the pod as we&rsquo;ll no longer need it.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">k8s</span><span class="p">.</span><span class="nf">CoreV1</span><span class="p">().</span>
+    <span class="nf">Pods</span><span class="p">(</span><span class="s">&#34;default&#34;</span><span class="p">).</span>
+    <span class="nf">Delete</span><span class="p">(</span>
+        <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span>
+        <span class="s">&#34;rtw&#34;</span><span class="p">,</span>
+        <span class="nx">metav1</span><span class="p">.</span><span class="nx">DeleteOptions</span><span class="p">{},</span>
+    <span class="p">)</span>
+
+<span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</code></pre></div><p>Done, the code above works as same as <code>kubectl delete pod rtw</code>.</p>
+<h3 id="put-all-things-together">Put all things together</h3>
+<p>Now is time to put all the things together in our HTTP Server, starting by the request and response payload:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">RequestBody</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">Image</span>   <span class="kt">string</span>   <span class="s">`json:&#34;image&#34;`</span>
+    <span class="nx">Command</span> <span class="kt">string</span>   <span class="s">`json:&#34;command&#34;`</span>
+    <span class="nx">Args</span>    <span class="p">[]</span><span class="kt">string</span> <span class="s">`json:&#34;args&#34;`</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">ResponseBody</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">ExitCode</span> <span class="kt">int32</span>  <span class="s">`json:&#34;exit_code&#34;`</span>
+    <span class="nx">Output</span>   <span class="kt">string</span> <span class="s">`json:&#34;output&#34;`</span>
+<span class="p">}</span>
+</code></pre></div><p>Good, now assuming we created a struct to represent the Kubernetes client with all method we created before, we end up with something like that:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Client</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">k8s</span> <span class="nx">kubernetes</span><span class="p">.</span><span class="nx">Interface</span>
+    <span class="nx">ns</span>  <span class="kt">string</span> <span class="c1">// The default namespace we&#39;ll work
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Client</span><span class="p">)</span> <span class="nf">CreatePod</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">image</span><span class="p">,</span> <span class="nx">command</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+<span class="o">...</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Client</span><span class="p">)</span> <span class="nf">GetPodExitCode</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kt">int32</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+<span class="o">...</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Client</span><span class="p">)</span> <span class="nf">GetPodStdOut</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+<span class="o">...</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Client</span><span class="p">)</span> <span class="nf">DeletePod</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+<span class="o">...</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewClient</span><span class="p">(</span><span class="nx">namespace</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Client</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// logic to create the k8s client
+</span><span class="c1"></span>    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">Client</span><span class="p">{</span><span class="nx">k8s</span><span class="p">:</span> <span class="nx">k8s</span><span class="p">,</span> <span class="nx">ns</span><span class="p">:</span> <span class="nx">namespace</span><span class="p">},</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>The last piece of code is the HTTP handler:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">rb</span> <span class="nx">RequestBody</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Body</span><span class="p">).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">rb</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">http</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(),</span> <span class="nx">http</span><span class="p">.</span><span class="nx">StatusBadRequest</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">CreatePod</span><span class="p">(</span>
+        <span class="nx">ctx</span><span class="p">,</span>
+        <span class="s">&#34;rtw&#34;</span><span class="p">,</span>
+        <span class="nx">rb</span><span class="p">.</span><span class="nx">Image</span><span class="p">,</span>
+        <span class="nx">rb</span><span class="p">.</span><span class="nx">Command</span><span class="p">,</span>
+        <span class="nx">rb</span><span class="p">.</span><span class="nx">Args</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">http</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(),</span> <span class="nx">http</span><span class="p">.</span><span class="nx">StatusInternalServerError</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">exitCode</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">GetPodExitCode</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rtw&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">http</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(),</span> <span class="nx">http</span><span class="p">.</span><span class="nx">StatusInternalServerError</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">stdout</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">GetPodStdOut</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rtw&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">http</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(),</span> <span class="nx">http</span><span class="p">.</span><span class="nx">StatusInternalServerError</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">DeletePod</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rtw&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Error deleting pod: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}()</span>
+    <span class="nx">w</span><span class="p">.</span><span class="nf">Header</span><span class="p">().</span><span class="nf">Set</span><span class="p">(</span><span class="s">&#34;Content-type&#34;</span><span class="p">,</span> <span class="s">&#34;application/json&#34;</span><span class="p">)</span>
+    <span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusOK</span><span class="p">)</span>
+    <span class="nx">json</span><span class="p">.</span><span class="nf">NewEncoder</span><span class="p">(</span><span class="nx">w</span><span class="p">).</span><span class="nf">Encode</span><span class="p">(</span>
+        <span class="nx">ResponseBody</span><span class="p">{</span><span class="nx">ExitCode</span><span class="p">:</span> <span class="nx">exitCode</span><span class="p">,</span> <span class="nx">Output</span><span class="p">:</span> <span class="nx">stdout</span><span class="p">},</span>
+    <span class="p">)</span>
+<span class="p">})</span>
+</code></pre></div><p>Finally, put all the things together, our <code>main</code> function looks like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">NewClient</span><span class="p">(</span><span class="s">&#34;default&#34;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+
+    <span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+       <span class="c1">// The HTTP Handler
+</span><span class="c1"></span>    <span class="p">})</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Starting HTTP Server&#34;</span><span class="p">)</span>
+    <span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8080&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>It&rsquo;s done, we finally have an API that creates a Kubernetes Pod, and returns the exit code and the stdout of the container executed inside the pod:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$  go run main.go <span class="p">&amp;</span>
+<span class="o">[</span>1<span class="o">]</span> <span class="m">25538</span>
+2021/05/15 19:28:27 Starting HTTP Server
+
+$ curl -i localhost:8080 -d <span class="s1">&#39;{&#34;image&#34;: &#34;python:3.8&#34;, &#34;command&#34;: &#34;python&#34;, &#34;args&#34;: [&#34;-c&#34;, &#34;print(\&#34;hello world\&#34;)&#34;]}&#39;</span>
+HTTP/1.1 <span class="m">200</span> OK
+Content-Type: application/json
+Date: Sat, <span class="m">15</span> May <span class="m">2021</span> 22:28:33 GMT
+Content-Length: <span class="m">41</span>
+
+<span class="o">{</span><span class="s2">&#34;exit_code&#34;</span>:0,<span class="s2">&#34;output&#34;</span>:<span class="s2">&#34;hello world\n&#34;</span><span class="o">}</span>
+</code></pre></div><h3 id="conclusion">Conclusion</h3>
+<p>Consuming the Kubernetes API is easy and adds the maximum power over Kubernetes integrations.
+If you want to use Kubernetes in the most complete and sustainable way, there&rsquo;s no easy path to do that without some code.</p>
+</article>
+
+        </main><footer id="footer">
+    Copyright © 2021 Diego Garcia
+</footer>
+</body>
+</html>
