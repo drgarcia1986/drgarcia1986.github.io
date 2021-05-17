@@ -54,7 +54,7 @@ Content-Type: application/json; charset=utf-8
 But why? First of all, Kubernetes is written in Go and the <em>client-go</em> is the official library used on Kubernetes ecosystem, so, there&rsquo;s no
 reason to use another library or consuming api-server via REST requests, but, if you hate Golang, there&rsquo;re other options, like
 <a href="https://github.com/kubernetes-client/python">client-python</a> for example.
-Also, I&rsquo;m using minikube with Kubernetes 1.18, but, feel free to select your Kubernetes installation.</p>
+Also, I&rsquo;m using minikube with Kubernetes 1.18, but, feel free to choose your Kubernetes installation.</p>
 <h3 id="code-snippets">Code snippets</h3>
 <p>All the snippets on this post are simplified to archive better readability but don&rsquo;t be angry, all codes are available <a href="https://github.com/drgarcia1986/drgarcia1986.github.io/tree/samples/programming-kubernetes-running-pods">here</a>.</p>
 <h3 id="adding-the-kubernetes-client">Adding the Kubernetes Client</h3>
@@ -201,7 +201,7 @@ hello world
 
 <span class="nf">checkErr</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
 </code></pre></div><p>Done, the code above works as same as <code>kubectl delete pod rtw</code>.</p>
-<h3 id="put-all-things-together">Put all things together</h3>
+<h3 id="put-all-the-things-together">Put all the things together</h3>
 <p>Now is time to put all the things together in our HTTP Server, starting by the request and response payload:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">RequestBody</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Image</span>   <span class="kt">string</span>   <span class="s">`json:&#34;image&#34;`</span>
@@ -293,18 +293,18 @@ hello world
     <span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8080&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div><p>It&rsquo;s done, we finally have an API that creates a Kubernetes Pod, and returns the exit code and the stdout of the container executed inside the pod:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$  go run main.go <span class="p">&amp;</span>
-<span class="o">[</span>1<span class="o">]</span> <span class="m">25538</span>
+<pre><code>$  go run main.go &amp;
+[1] 25538
 2021/05/15 19:28:27 Starting HTTP Server
 
-$ curl -i localhost:8080 -d <span class="s1">&#39;{&#34;image&#34;: &#34;python:3.8&#34;, &#34;command&#34;: &#34;python&#34;, &#34;args&#34;: [&#34;-c&#34;, &#34;print(\&#34;hello world\&#34;)&#34;]}&#39;</span>
-HTTP/1.1 <span class="m">200</span> OK
+$ curl -i localhost:8080 -d '{&quot;image&quot;: &quot;python:3.8&quot;, &quot;command&quot;: &quot;python&quot;, &quot;args&quot;: [&quot;-c&quot;, &quot;print(\&quot;hello world\&quot;)&quot;]}'
+HTTP/1.1 200 OK
 Content-Type: application/json
-Date: Sat, <span class="m">15</span> May <span class="m">2021</span> 22:28:33 GMT
-Content-Length: <span class="m">41</span>
+Date: Sat, 15 May 2021 22:28:33 GMT
+Content-Length: 41
 
-<span class="o">{</span><span class="s2">&#34;exit_code&#34;</span>:0,<span class="s2">&#34;output&#34;</span>:<span class="s2">&#34;hello world\n&#34;</span><span class="o">}</span>
-</code></pre></div><h3 id="conclusion">Conclusion</h3>
+{&quot;exit_code&quot;:0,&quot;output&quot;:&quot;hello world\n&quot;}
+</code></pre><h3 id="conclusion">Conclusion</h3>
 <p>Consuming the Kubernetes API is easy and adds the maximum power over Kubernetes integrations.
 If you want to use Kubernetes most complete and sustainable way, there&rsquo;s no easy path to do that without some code.</p>
 </article>
