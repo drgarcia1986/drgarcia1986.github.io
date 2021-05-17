@@ -110,7 +110,7 @@ kube-system
 When we do that, we don&rsquo;t need to inform where&rsquo;s the config yaml file.</p>
 <h3 id="creating-and-running-pod">Creating and Running Pod</h3>
 <p>Now things start to get excited.
-We&rsquo;ll create a pod manifest in the same way that you would but programmatic.</p>
+We&rsquo;ll create a pod manifest just as you would a yaml, but programmatic.</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">pod</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Pod</span><span class="p">{</span>
     <span class="nx">ObjectMeta</span><span class="p">:</span> <span class="nx">metav1</span><span class="p">.</span><span class="nx">ObjectMeta</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;rtw&#34;</span><span class="p">},</span>
     <span class="nx">Spec</span><span class="p">:</span> <span class="nx">v1</span><span class="p">.</span><span class="nx">PodSpec</span><span class="p">{</span>
