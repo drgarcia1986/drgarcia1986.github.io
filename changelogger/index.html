@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reinventing the wheel to learn how a wheel works">
+    
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Changelogger</title>
+</head>
+<body><header id="banner">
+    <h2><a href="/">Reinventing The Wheel</a></h2>
+    <nav>
+        <ul>
+            <li>
+                <a href="/" title="posts">posts</a>
+            </li><li>
+                <a href="/about/" title="">about</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Changelogger</h1><time>June 1, 2021</time></header><p>I started a project called <code>changelogger</code>.
+This project is a very simplified version of <a href="https://github.com/twisted/towncrier">Towncrier</a> but written in Go.</p>
+<p>I can already hear you say: <strong>Why?</strong>.
+Well, Golang isn&rsquo;t the main goal here, but the fact that I can distribute this tool as a binary without care about the environment.
+There&rsquo;s no problem with Python (to tell the truth, Python has been paying my bills for ten years) but, I wouldn&rsquo;t like to force a <em>Golang/JavaScript/Java/[put here your favorite lang]</em> dev to setup a python environment only to use a simple tool.</p>
+<p>I used towncrier in my last python projects and just love how the tool helps me to keep my changelog updated without git conflicts, so I want to continue to use it (or some similarly).</p>
+<p>That&rsquo;s how changelogger was born, with only limited features that I&rsquo;m used to using in towncrier.</p>
+<p>Check <a href="https://github.com/drgarcia1986/changelogger">the repository</a>, get the binary on <a href="https://github.com/drgarcia1986/changelogger/releases/tag/v0.0.1">release page</a> or install from the source with <code>go get github.com/drgarcia1986/changelogger</code>.</p>
+</article>
+
+        </main><footer id="footer">
+    Copyright © 2021 Diego Garcia
+</footer>
+</body>
+</html>
