@@ -19,7 +19,7 @@
       
       <guid>/changelogger/</guid>
       <description>I started a project called changelogger. This project is a very simplified version of Towncrier but written in Go.
-I can already hear you say: Why?. Well, Golang isn&amp;rsquo;t the main goal here, but the fact that I can distribute this tool as a binary without care about the environment. There&amp;rsquo;s no problem with Python (to tell the truth, Python has been paying my bills for ten years) but, I wouldn&amp;rsquo;t like to force a Golang/JavaScript/Java/[put here your favorite lang] dev to setup a python environment only to use a simple tool.</description>
+I can already hear you say: Why?. Well, Golang isn&amp;rsquo;t the main goal here, but the fact that I can distribute this tool as a binary without care about the developer environment. There&amp;rsquo;s no problem with Python (to tell the truth, Python has been paying my bills for ten years) but, I wouldn&amp;rsquo;t like to force a Golang/JavaScript/Java/[put here your favorite lang] dev to setup a python environment only to use a simple tool.</description>
     </item>
     
     
